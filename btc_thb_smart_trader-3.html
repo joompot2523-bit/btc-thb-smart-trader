@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="theme-color" content="#080d18"><title>BTC/THB SMART TRADER</title>
+<style>
+:root{--bg:#080d18;--panel:#111a2b;--panel2:#0d1524;--line:#26334a;--txt:#edf3ff;--muted:#91a0b8;--green:#25d695;--red:#ff667d;--yellow:#f5c451;--blue:#65a9ff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--txt);font:15px system-ui,-apple-system,"Noto Sans Thai",sans-serif}
+header{padding:16px 16px 10px;background:#0b1220;position:sticky;top:0;z-index:3;border-bottom:1px solid var(--line)}
+.brand{font-size:18px;font-weight:800;letter-spacing:.4px}.sub{font-size:11px;color:var(--muted);margin-top:2px}
+.wrap{max-width:760px;margin:auto;padding:12px 12px 90px}.row{display:flex;gap:9px;align-items:center;justify-content:space-between}.card{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:14px;margin:9px 0}
+.price{font-size:29px;font-weight:800;letter-spacing:-.7px}.muted{color:var(--muted)}.small{font-size:12px}.tiny{font-size:11px}.green{color:var(--green)}.red{color:var(--red)}.yellow{color:var(--yellow)}
+.pill{font-size:11px;padding:4px 9px;border-radius:20px;background:#26334a;color:var(--muted)}.status{font-weight:800;font-size:20px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.metric{background:var(--panel2);border-radius:10px;padding:10px}.metric b{display:block;font-size:16px;margin-top:3px;overflow-wrap:anywhere}
+h2{font-size:15px;margin:0 0 11px}.section{margin-top:17px}.bar{height:1px;background:var(--line);margin:10px 0}
+button,.tab{border:1px solid var(--line);background:#17243a;color:var(--txt);border-radius:10px;padding:9px 12px;font:inherit}
+button:active{transform:scale(.98)}.tabs{display:flex;gap:6px;overflow:auto;margin:8px 0}.tab{white-space:nowrap;font-size:12px}.tab.active{background:#25436b;border-color:#477bb8}
+.view{display:none}.view.active{display:block}
+table{width:100%;border-collapse:collapse;font-size:12px}td,th{text-align:right;padding:7px 4px;border-bottom:1px solid var(--line)}td:first-child,th:first-child{text-align:left}
+canvas{width:100%;height:230px;display:block;background:#0b1322;border-radius:10px}
+input{width:100%;background:#0b1322;color:var(--txt);border:1px solid var(--line);border-radius:9px;padding:10px;margin:4px 0 10px}
+label{font-size:12px;color:var(--muted)}.notice{padding:10px;border-radius:10px;background:#282318;color:#f5d88e;font-size:12px}
+footer{position:fixed;bottom:0;left:0;right:0;background:#0b1220;border-top:1px solid var(--line);display:flex;justify-content:space-around;padding:8px 2px calc(8px + env(safe-area-inset-bottom));z-index:4}
+footer button{border:0;background:transparent;font-size:11px;padding:6px 7px;color:var(--muted)}footer button.active{color:var(--blue)}
+@media(min-width:600px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.wrap{padding-top:20px}}
+</style></head>
+<body>
+<header><div class="row"><div><div class="brand">₿ BTC/THB SMART TRADER</div><div class="sub">SPOT ONLY • CAPITAL PRESERVATION FIRST</div></div><span id="connection" class="pill">กำลังเชื่อมต่อ…</span></div></header>
+<main class="wrap">
+<div class="tabs">
+<button class="tab active" data-view="home">ภาพรวม</button><button class="tab" data-view="analysis">วิเคราะห์</button><button class="tab" data-view="plan">แผนเทรด</button><button class="tab" data-view="history">บันทึก</button>
+</div>
+<section id="home" class="view active">
+<div class="card">
+<div class="row"><span class="muted small">BITKUB • BTC/THB</span><span id="tickerStatus" class="pill">รอตรวจสอบ</span></div>
+<div id="price" class="price">—</div><div class="row"><span id="change" class="muted small">เปลี่ยนแปลง 24 ชม. —</span><span id="updated" class="muted tiny">—</span></div>
+<div class="bar"></div><div class="grid">
+<div class="metric"><span class="muted tiny">สูงสุด 24 ชม.</span><b id="high">—</b></div><div class="metric"><span class="muted tiny">ต่ำสุด 24 ชม.</span><b id="low">—</b></div>
+<div class="metric"><span class="muted tiny">Bid สูงสุด</span><b id="bid">—</b></div><div class="metric"><span class="muted tiny">Ask ต่ำสุด</span><b id="ask">—</b></div>
+</div></div>
+<div class="card"><div class="row"><h2>สถานะระบบตรวจสอบ</h2><button id="refresh">รีเฟรช</button></div>
+<div class="row"><span>ข้อมูลราคา (Ticker)</span><b id="sTicker" class="yellow">รอตรวจสอบ</b></div><div class="bar"></div>
+<div class="row"><span>สมุดคำสั่ง (Order Book)</span><b id="sBook" class="yellow">รอตรวจสอบ</b></div><div class="bar"></div>
+<div class="row"><span>แท่งเทียน 1 ชั่วโมง</span><b id="sCandle" class="yellow">รอตรวจสอบ</b></div>
+<div id="errors" class="notice" style="margin-top:12px">ระบบกำลังดึงข้อมูลจาก Bitkub Public API</div></div>
+<div class="card"><div class="row"><h2>สัญญาณระบบ</h2><span class="pill">Spot เท่านั้น</span></div><div id="signal" class="status yellow">HOLD / รอตรวจสอบข้อมูล</div><p id="signalReason" class="small muted">ยังไม่มีข้อมูลยืนยันครบถ้วน</p></div>
+<div class="card"><h2>กราฟ BTC/THB • 1 ชั่วโมง</h2><canvas id="chart" width="700" height="280"></canvas><div id="candleInfo" class="muted tiny" style="margin-top:8px">ยังไม่มีแท่งเทียนที่ผ่านการตรวจสอบ</div></div>
+</section>
+<section id="analysis" class="view">
+<div class="card"><h2>ตัวชี้วัดจากราคาปิดแท่งที่สมบูรณ์</h2><div class="grid">
+<div class="metric">RSI (14)<b id="rsi">—</b></div><div class="metric">MA (50)<b id="ma50">—</b></div><div class="metric">MA (100)<b id="ma100">—</b></div><div class="metric">MA (200)<b id="ma200">—</b></div>
+<div class="metric">ATR (14)<b id="atr">—</b></div><div class="metric">แท่งที่ใช้<b id="count">—</b></div></div></div>
+<div class="card"><h2>แนวรับ / แนวต้าน • 48 ชั่วโมง</h2><div class="grid"><div class="metric">แนวรับ<b id="support">—</b></div><div class="metric">แนวต้าน<b id="resistance">—</b></div></div><p class="muted tiny">คำนวณจาก Low ต่ำสุดและ High สูงสุดของแท่งที่ปิดแล้วในช่วง 48 ชั่วโมง ไม่ใช่การรับประกันราคา</p></div>
+<div class="card"><h2>สมุดคำสั่ง 5 ระดับแรก</h2><table><thead><tr><th>ฝั่งซื้อ Bid</th><th>จำนวน BTC</th><th>ฝั่งขาย Ask</th><th>จำนวน BTC</th></tr></thead><tbody id="bookRows"><tr><td colspan="4">ยังไม่มีข้อมูล</td></tr></tbody></table></div>
+</section>
+<section id="plan" class="view">
+<div class="card"><h2>แผนคำนวณ Spot (ไม่ส่งคำสั่งซื้อขาย)</h2><label>เงินทุน (THB)</label><input id="capital" type="number" value="10000" min="0">
+<label>ความเสี่ยงต่อแผน (%)</label><input id="risk" type="number" value="1" min="0.1" max="5" step=".1">
+<label>ราคาเข้า (THB) — ค่าเริ่มต้นจาก Ask</label><input id="entry" type="number" placeholder="รอราคา Ask">
+<label>Stop Loss (THB)</label><input id="stop" type="number" placeholder="กรอกราคาตัดขาดทุน">
+<label>เป้าหมายขาย (THB)</label><input id="target" type="number" placeholder="กรอกราคาเป้าหมาย">
+<label>ค่าธรรมเนียมซื้อและขาย (%)</label><input id="fee" type="number" value="0.25" step=".01">
+<button id="calc">คำนวณแผน</button><div id="planResult" class="notice" style="margin-top:12px">HOLD — รอข้อมูลและราคาที่ผู้ใช้ยืนยัน</div>
+<p class="muted tiny">ระบบไม่เชื่อมบัญชี ไม่ส่งคำสั่งซื้อขายจริง และไม่ถือว่าคำแนะนำนี้เป็นการรับประกันผลกำไร</p></div>
+</section>
+<section id="history" class="view"><div class="card"><h2>บันทึกการเทรดที่ผู้ใช้กรอกเอง</h2><p class="muted small">เวอร์ชันนี้ยังไม่เชื่อมประวัติคำสั่งในบัญชี Bitkub และจะไม่แต่งข้อมูลธุรกรรมขึ้นมา</p><label>หมายเหตุ</label><input id="memo" placeholder="เช่น แผนซื้อ / ขาย / เหตุผลที่รอ"><button id="saveMemo">บันทึกหมายเหตุในเครื่อง</button><div id="memos" class="small muted" style="margin-top:12px">ยังไม่มีบันทึก</div></div></section>
+</main>
+<footer><button class="active" data-view="home">◉<br>ภาพรวม</button><button data-view="analysis">▥<br>วิเคราะห์</button><button data-view="plan">⇄<br>แผนเทรด</button><button data-view="history">☷<br>บันทึก</button></footer>
+<script>
+const $=id=>document.getElementById(id), fmt=n=>Number.isFinite(n)?n.toLocaleString('th-TH',{maximumFractionDigits:2}):'—';
+let candles=[],book=null,ticker=null,valid={ticker:false,book:false,candle:false},lastUpdate=null;
+function setStatus(id,ok,msg){$(id).textContent=msg;$(id).className=ok?'green':'red'}
+async function getJSON(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw Error('HTTP '+r.status+' '+r.statusText);return await r.json()}
+async function loadTicker(){
+ try{const d=await getJSON('https://api.bitkub.com/api/market/ticker?sym=THB_BTC');let x=Array.isArray(d)?d[0]:d?.THB_BTC;
+ if(!x)throw Error('API ไม่พบข้อมูล THB_BTC');const last=Number(x.last),high=Number(x.high24hr),low=Number(x.low24hr),bid=Number(x.highestBid),ask=Number(x.lowestAsk),chg=Number(x.percentChange);
+ if(![last,high,low,bid,ask,chg].every(Number.isFinite)||last<=0||low<=0||high<low||bid<=0||ask<=0||bid>ask)throw Error('ค่าราคา/ช่วงสูงต่ำ/Bid-Ask ไม่สมเหตุสมผล');
+ ticker={last,high,low,bid,ask,chg};valid.ticker=true;setStatus('sTicker',true,'ผ่าน');$('tickerStatus').textContent='ผ่าน';$('tickerStatus').className='pill green';
+ $('price').textContent='฿'+fmt(last);$('high').textContent='฿'+fmt(high);$('low').textContent='฿'+fmt(low);$('bid').textContent='฿'+fmt(bid);$('ask').textContent='฿'+fmt(ask);
+ $('change').textContent=(chg>=0?'+':'')+fmt(chg)+'% ใน 24 ชม.';$('change').className=chg>=0?'green small':'red small';$('entry').value=ask;
+ }catch(e){valid.ticker=false;setStatus('sTicker',false,'ไม่ผ่าน');$('tickerStatus').textContent='ผิดพลาด';$('errors').textContent='Ticker: '+e.message}
+}
+async function loadBook(){
+ try{const d=await getJSON('https://api.bitkub.com/api/market/depth?sym=THB_BTC&lmt=10');if(d.error!==0||!d.result)throw Error('API error '+d.error);
+ const bids=d.result.bids,asks=d.result.asks;if(!Array.isArray(bids)||!Array.isArray(asks)||!bids.length||!asks.length)throw Error('ข้อมูล Bid/Ask ว่าง');
+ for(const a of [...bids,...asks])if(!Array.isArray(a)||a.length<2||!Number.isFinite(+a[0])||!Number.isFinite(+a[1])||+a[0]<=0||+a[1]<=0)throw Error('รูปแบบระดับราคาไม่ถูกต้อง');
+ if(Math.max(...bids.map(x=>+x[0]))>=Math.min(...asks.map(x=>+x[0])))throw Error('Bid/Ask ไขว้กันผิดปกติ');
+ book={bids,asks};valid.book=true;setStatus('sBook',true,'ผ่าน');
+ $('bookRows').innerHTML=Array.from({length:Math.min(5,bids.length,asks.length)},(_,i)=>`<tr><td class="green">${fmt(+bids[i][0])}</td><td>${fmt(+bids[i][1])}</td><td class="red">${fmt(+asks[i][0])}</td><td>${fmt(+asks[i][1])}</td></tr>`).join('');
+ }catch(e){valid.book=false;setStatus('sBook',false,'ไม่ผ่าน');$('errors').textContent='Order Book: '+e.message}
+}
+function sma(a,n){if(a.length<n)return NaN;return a.slice(-n).reduce((s,x)=>s+x,0)/n}
+function rsi(a,n=14){if(a.length<=n)return NaN;let g=0,l=0;for(let i=a.length-n;i<a.length;i++){let d=a[i]-a[i-1];if(d>0)g+=d;else l-=d}return l===0?100:100-100/(1+(g/n)/(l/n))}
+function atr(cs,n=14){if(cs.length<=n)return NaN;let z=[];for(let i=1;i<cs.length;i++)z.push(Math.max(cs[i].h-cs[i].l,Math.abs(cs[i].h-cs[i-1].c),Math.abs(cs[i].l-cs[i-1].c)));return sma(z,n)}
+async function loadCandles(){
+ try{
+ const now=Math.floor(Date.now()/1000),from=now-400*3600;const d=await getJSON(`https://api.bitkub.com/tradingview/history?symbol=BTC_THB&resolution=60&from=${from}&to=${now}`);
+ if(d.s!=='ok')throw Error('API status: '+d.s);const keys=['t','o','h','l','c','v'];if(!keys.every(k=>Array.isArray(d[k])))throw Error('ฟิลด์ OHLCV ไม่ครบ');
+ const n=d.t.length;if(n<250||!keys.every(k=>d[k].length===n))throw Error('ข้อมูลไม่พอ/จำนวน OHLCV ไม่เท่ากัน: '+n);
+ let rows=d.t.map((t,i)=>({t:+t,o:+d.o[i],h:+d.h[i],l:+d.l[i],c:+d.c[i],v:+d.v[i]}));
+ if(rows.some(x=>![x.t,x.o,x.h,x.l,x.c,x.v].every(Number.isFinite)||x.t<=0||x.o<=0||x.h<=0||x.l<=0||x.c<=0||x.v<0||x.h<Math.max(x.o,x.c,x.l)||x.l>Math.min(x.o,x.c,x.h)))throw Error('OHLCV มีค่าผิดปกติ');
+ rows.sort((a,b)=>a.t-b.t);const seen=new Set();let dup=0;for(const x of rows){if(seen.has(x.t))dup++;seen.add(x.t)}
+ const unique=rows.filter((x,i)=>i===0||x.t!==rows[i-1].t);
+ if(dup)throw Error('พบ timestamp ซ้ำ '+dup+' แท่ง');
+ const closed=unique.filter(x=>x.t+3600<=now);if(closed.length<250)throw Error('แท่งปิดแล้วไม่ถึง 250: '+closed.length);
+ for(let i=1;i<closed.length;i++)if(closed[i].t-closed[i-1].t!==3600)throw Error('timestamp ขาดช่วง/ไม่ต่อเนื่อง');
+ if(now-closed[closed.length-1].t>7200)throw Error('แท่งล่าสุดเก่าเกิน 2 ชั่วโมง');
+ candles=closed;valid.candle=true;setStatus('sCandle',true,'ผ่าน • '+closed.length+' แท่ง');
+ const closes=closed.map(x=>x.c),last=closed.at(-1),recent=closed.filter(x=>x.t>=now-48*3600);
+ $('rsi').textContent=fmt(rsi(closes));$('ma50').textContent='฿'+fmt(sma(closes,50));$('ma100').textContent='฿'+fmt(sma(closes,100));$('ma200').textContent='฿'+fmt(sma(closes,200));$('atr').textContent='฿'+fmt(atr(closed));$('count').textContent=closed.length;
+ $('support').textContent='฿'+fmt(Math.min(...recent.map(x=>x.l)));$('resistance').textContent='฿'+fmt(Math.max(...recent.map(x=>x.h)));
+ $('candleInfo').textContent='แท่งล่าสุดที่ปิด: '+new Date(last.t*1000).toLocaleString('th-TH')+' • '+closed.length+' แท่ง';
+ drawChart();
+ }catch(e){valid.candle=false;setStatus('sCandle',false,'ไม่ผ่าน');$('errors').textContent='Candles: '+e.message}
+}
+function drawChart(){const c=$('chart'),ctx=c.getContext('2d'),w=c.width,h=c.height;ctx.clearRect(0,0,w,h);if(!candles.length)return;const a=candles.slice(-48),lo=Math.min(...a.map(x=>x.l)),hi=Math.max(...a.map(x=>x.h)),pad=15,range=hi-lo||1;ctx.strokeStyle='#26334a';ctx.lineWidth=1;for(let j=0;j<5;j++){let y=pad+j*(h-2*pad)/4;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke()}let step=w/a.length,bw=Math.max(3,step*.52);a.forEach((x,i)=>{let xx=i*step+step/2,yo=pad+(hi-x.o)/range*(h-2*pad),yc=pad+(hi-x.c)/range*(h-2*pad),yh=pad+(hi-x.h)/range*(h-2*pad),yl=pad+(hi-x.l)/range*(h-2*pad),up=x.c>=x.o;ctx.strokeStyle=up?'#25d695':'#ff667d';ctx.fillStyle=ctx.strokeStyle;ctx.beginPath();ctx.moveTo(xx,yh);ctx.lineTo(xx,yl);ctx.stroke();ctx.fillRect(xx-bw/2,Math.min(yo,yc),bw,Math.max(2,Math.abs(yc-yo)))})}
+function evaluate(){const ok=valid.ticker&&valid.book&&valid.candle;if(!ok){$('signal').textContent='HOLD';$('signalReason').textContent='ข้อมูลราคา / Order Book / แท่งเทียนยังไม่ผ่านครบทุกส่วน';return}
+ const c=candles.map(x=>x.c),rv=rsi(c),m50=sma(c,50),m200=sma(c,200),a=atr(candles),last=c.at(-1),res=Number($('resistance').textContent.replace(/[฿,]/g,''));const checks=[last>m200,m50>m200,rv>=40&&rv<=65,Number.isFinite(a)&&res-last>a];
+ const all=checks.every(Boolean);$('signal').textContent=all?'รอจุดเข้าตามแผน':'HOLD / รอ';$('signal').className='status '+(all?'green':'yellow');$('signalReason').textContent='เงื่อนไขผ่าน '+checks.filter(Boolean).length+'/4 • ไม่ส่งคำสั่งซื้อขายอัตโนมัติ'}
+async function refresh(){ $('connection').textContent='กำลังดึงข้อมูล';$('errors').textContent='กำลังตรวจสอบข้อมูลจาก Bitkub…';valid={ticker:false,book:false,candle:false};await Promise.all([loadTicker(),loadBook(),loadCandles()]);$('updated').textContent='อัปเดต '+new Date().toLocaleTimeString('th-TH');if(valid.ticker&&valid.book&&valid.candle)$('errors').textContent='ข้อมูลทั้ง 3 ส่วนผ่านการตรวจสอบเบื้องต้น';$('connection').textContent=Object.values(valid).every(Boolean)?'เชื่อมต่อแล้ว':'มีข้อมูลไม่ผ่าน';$('connection').className='pill '+(Object.values(valid).every(Boolean)?'green':'red');evaluate()}
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.querySelectorAll('[data-view]').forEach(x=>x.classList.remove('active'));$(b.dataset.view).classList.add('active');document.querySelectorAll(`[data-view="${b.dataset.view}"]`).forEach(x=>x.classList.add('active'))}));
+$('refresh').onclick=refresh;
+$('calc').onclick=()=>{let cap=+$('capital').value,risk=+$('risk').value/100,e=+$('entry').value,s=+$('stop').value,t=+$('target').value,f=+$('fee').value/100;
+ if(![cap,risk,e,s,t,f].every(Number.isFinite)||cap<=0||risk<=0||risk>.05||e<=0||s<=0||t<=e||s>=e||f<0||f>.05){$('planResult').textContent='HOLD — กรุณาตรวจสอบเงินทุน ความเสี่ยง Entry, Stop Loss และ Target';return}
+ let riskTHB=cap*risk,unitRisk=e-s+e*f+s*f,qty=riskTHB/unitRisk,cost=qty*e*(1+f);if(cost>cap){qty=cap/(e*(1+f));cost=qty*e*(1+f)}
+ let proceeds=qty*t*(1-f),net=proceeds-cost;$('planResult').textContent=`ปริมาณโดยประมาณ ${qty.toFixed(8)} BTC | เงินทุนรวมค่าซื้อ ${fmt(cost)} THB | กำไร/ขาดทุนสุทธิเมื่อถึงเป้า ${fmt(net)} THB (หักค่าธรรมเนียมซื้อ/ขายแล้ว) • ตรวจสอบสัญญาณตลาดแยกต่างหาก และคง HOLD หากข้อมูลไม่ครบ`};
+$('saveMemo').onclick=()=>{let v=$('memo').value.trim();if(!v)return;let arr=JSON.parse(localStorage.getItem('btcNotes')||'[]');arr.unshift({v,at:new Date().toLocaleString('th-TH')});localStorage.setItem('btcNotes',JSON.stringify(arr.slice(0,50)));$('memo').value='';renderMemos()};
+function renderMemos(){let arr=JSON.parse(localStorage.getItem('btcNotes')||'[]');$('memos').innerHTML=arr.length?arr.map(x=>`<p>• ${x.v.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}<br><span class="tiny">${x.at}</span></p>`).join(''):'ยังไม่มีบันทึก'}
+renderMemos();refresh();setInterval(refresh,60000);
+</script></body></html>
